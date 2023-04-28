@@ -15,9 +15,15 @@
 #include <ArduinoHttpClient.h>
 #include <Arduino_JSON.h>
 #include <LiquidCrystal.h>
+#include <Adafruit_NeoPixel.h>
 #include "arduino_secrets.h"
 
 LiquidCrystal lcd(7, 8, 9, 10, 11, 12);
+
+#define PIN 5 
+#define NUMPIXELS 24
+
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
 
 WiFiSSLClient netSocket;
 // WiFiClient netSocket;
@@ -31,7 +37,7 @@ String location = "40.69805897384927,-73.98644816137055";
 HttpClient http = HttpClient(netSocket, serverAddress, port);
 
 long lastRequestTime = 0;
-const long requestInterval = 60000 * 2;    // every 2 minutes
+const long requestInterval = 60000 * 10;    // every 10 minutes
 
 String jsonBuffer;
 
@@ -40,6 +46,9 @@ void setup() {
 
   // LCD's number of columns and rows:
   lcd.begin(20, 4);
+
+  // Neopixel ring:
+  pixels.begin();
 
   if(!Serial) delay(3000);
 
@@ -61,6 +70,9 @@ void setup() {
 
 
 void loop() {
+  // Set all pixel colors to off:
+  pixels.clear();
+  
   // Make an HTTP request once every interval:
   if(millis() - lastRequestTime > requestInterval){
     lcd.clear();
@@ -109,6 +121,14 @@ void connectToServer(){
     String currCond = myObject["current"]["condition"]["text"];
     // Wind speed:
     int currWind = myObject["wind_mph"];
+    // Time, get the hour:
+    String localTime = myObject["location"]["localtime"];
+    String h = localTime.substring(11, 13);
+    String m = localTime.substring(15, 17);
+    int hour = h.toInt();
+    Serial.print("Hour is: ");
+    Serial.println(hour);
+
 
     Serial.print("Location: ");
     Serial.println(currLoc);
@@ -120,6 +140,9 @@ void connectToServer(){
     Serial.print("Wind speed: ");
     Serial.print(currWind);
     Serial.println(" mph");
+
+    // Update light ring:
+    updateLightRing(hour);
 
     
     // Write to LCD screen:
@@ -137,6 +160,14 @@ void connectToServer(){
     lcd.print(" mph");
 
 
+}
+
+void updateLightRing(int h) {
+  for(int i = 0; i < h; i++){
+    pixels.setBrightness(100);
+    pixels.setPixelColor(i, pixels.Color(101, 0, 155));
+    pixels.show();
+  }
 }
   
 
